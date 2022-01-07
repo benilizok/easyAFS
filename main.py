@@ -1,3 +1,4 @@
+# -*- coding: utf8 -*-
 import sys
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication, QMainWindow
@@ -5,6 +6,10 @@ import json
 import os
 from design import Ui_Main
 import openpyxl
+import xlsxwriter
+from openpyxl import load_workbook
+from openpyxl.styles import Border, Side, PatternFill, Font, GradientFill, Alignment, NamedStyle
+from openpyxl.styles.colors import Color
 
 
 def file_excel():
@@ -309,9 +314,101 @@ class Main(QMainWindow, Ui_Main):
             data['AFS_' + Mission_number].update(page_five)
             with open('data.json',"w") as file:
                 json.dump(data,file)
+            create_excel_doc()
+            add_ws()
             self.main_menu()
-
-
+            
+        # создание таблицы excel
+        def create_excel_doc():
+            file_name = ''
+            file_path = ''
+            with open ('data.json','r') as file:
+                data = json.load(file)
+                file_name = data["pasport_ishodnie_dannye"]["file_name"]
+                file_path = data["pasport_ishodnie_dannye"]["path_for_document"]
+            file_name = file_name + ".xlsx"
+            if os.path.exists(file_path+"/"+file_name):
+                # файл существует
+                #print("Файл существует")
+                pass
+            else:
+                # файл не существует
+                os.chdir(file_path)
+                workbook = xlsxwriter.Workbook(file_name)
+                workbook.close()
+                
+                
+        # добавление листа в таблицу (отдельный АФС)
+        def add_ws():
+            file_name = ''
+            file_path = ''
+            with open ('data.json','r') as file:
+                data = json.load(file)
+                file_name = data["pasport_ishodnie_dannye"]["file_name"]
+                file_path = data["pasport_ishodnie_dannye"]["path_for_document"]
+            file_name = file_name + ".xlsx"
+            os.chdir(file_path)
+            try:
+                myfile = open(file_name, "r+")
+            except IOError:
+                print("Файл открыт")
+            else:
+                workbook = load_workbook(file_name)
+                worksheet_AFS1 = workbook.create_sheet("АФС_1")
+                row = 1
+                column = 1
+                frame_1 = ["Наименование объекта", "Оператор", "Номер полетного задания", "Дата полета", "Время полета", "Тип АФС", "Вид БВС", "Название БВС", "Регистрационный номер борта", "Полезная нагрузка 1", "Полезная нагрузка 2", "Метод решения", "Высота полета", "Продольное перекрытие", "Поперечное перекрытие", "Разрешение", "Количество снимков", "Осадки", "Облачность"]
+                frame_2 = ["Геодезия", "Наименование точки (базы)", "Прибор (название, номер)", "Порядковый номер лога (базы)", "Высота прибора", "Название файла"]
+                frame_3 = ["Примечания", "Использование полета в обработке", "Причина, по которой нельзя использовать", "Происшествия"]
+                
+                for item in frame_1 :
+                    worksheet_AFS1.cell(row=row, column=column).value = item
+                    row += 1
+                
+                row = 22
+                column = 1
+                for item in frame_2 :
+                    worksheet_AFS1.cell(row=row, column=column).value = item
+                    row += 1
+                
+                row = 22
+                column = 4
+                for item in frame_3 :
+                    worksheet_AFS1.cell(row=row, column=column).value = item
+                    row += 1
+                
+                worksheet_AFS1.merge_cells('D25:D27')
+                worksheet_AFS1.merge_cells('E25:E27')
+                worksheet_AFS1.merge_cells('C22:C27')
+                worksheet_AFS1.merge_cells('A22:B22')
+                worksheet_AFS1.merge_cells('D22:E22')
+                
+                highlight_blue = NamedStyle(name="highlight_blue")
+                highlight_blue.font = Font(name = 'Arial', bold=True, size=11)
+                blueFill = PatternFill(start_color='0099CCFF',
+                   end_color='0099CCFF',
+                   fill_type='solid')
+                highlight_blue.fill = blueFill
+                workbook.add_named_style(highlight_blue)
+                
+                usual_style = NamedStyle(name="usual_style")
+                usual_style.font = Font(name = 'Arial', bold=False, size=11)
+                usual_style.alignment = Alignment(horizontal='left',vertical='center', wrap_text=False, shrink_to_fit=False)
+                workbook.add_named_style(usual_style)
+                
+                for c in range(1, 6) :
+                    for r in range(1, 28):
+                        worksheet_AFS1.cell(row=r, column=c).style = usual_style
+                
+                
+                worksheet_AFS1['A22'].style = 'highlight_blue'
+                worksheet_AFS1['D22'].style = 'highlight_blue'
+                
+                
+                
+                
+                workbook.save(filename=file_name)
+                workbook.close()
 
         self.pushButton_primechania_2.clicked.connect(btn_next)
 
@@ -331,12 +428,3 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     showMain = Main()
     sys.exit(app.exec_())
-
-
-
-
-
-
-
-
-
